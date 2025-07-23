@@ -16,7 +16,9 @@ export interface Expense {
 
 export interface Balance {
   personId: string;
-  balance: number; // positive = owes money, negative = is owed money
+  balance: number; // positive = is owed money, negative = owes money
+  totalPaid: number;
+  totalOwed: number;
 }
 
 export interface Settlement {

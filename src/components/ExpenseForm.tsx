@@ -29,14 +29,20 @@ export function ExpenseForm({ people, onAddExpense }: ExpenseFormProps) {
   const [paidBy, setPaidBy] = useState("");
   const [splitBetween, setSplitBetween] = useState<string[]>([]);
   const [category, setCategory] = useState("");
+  const [currency, setCurrency] = useState<"JPY" | "PLN">("JPY");
+  
+  // Kurs wymiany PLN -> JPY (aktualizuj w razie potrzeby)
+  const exchangeRate = 37; // 1 PLN = ~37 JPY
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !amount || !paidBy || splitBetween.length === 0) return;
 
+    const finalAmount = currency === "PLN" ? parseFloat(amount) * exchangeRate : parseFloat(amount);
+
     onAddExpense({
-      description,
-      amount: parseFloat(amount),
+      description: currency === "PLN" ? `${description} (${amount} PLN)` : description,
+      amount: finalAmount,
       paidBy,
       splitBetween,
       date: new Date().toISOString(),
@@ -48,6 +54,7 @@ export function ExpenseForm({ people, onAddExpense }: ExpenseFormProps) {
     setPaidBy("");
     setSplitBetween([]);
     setCategory("");
+    setCurrency("JPY");
   };
 
   const handleSplitChange = (personId: string, checked: boolean) => {
@@ -80,16 +87,33 @@ export function ExpenseForm({ people, onAddExpense }: ExpenseFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">Kwota (¥)</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-              />
+              <Label htmlFor="amount">Kwota</Label>
+              <div className="flex gap-2">
+                <Select value={currency} onValueChange={(value: "JPY" | "PLN") => setCurrency(value)}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="JPY">¥</SelectItem>
+                    <SelectItem value="PLN">zł</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+              </div>
+              {currency === "PLN" && amount && (
+                <p className="text-xs text-muted-foreground">
+                  ≈ {(parseFloat(amount || "0") * exchangeRate).toLocaleString('pl-PL')} ¥
+                </p>
+              )}
             </div>
           </div>
 

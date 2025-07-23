@@ -10,10 +10,10 @@ import { Person, Expense } from "@/types/expense";
 import { useToast } from "@/hooks/use-toast";
 
 const defaultPeople: Person[] = [
-  { id: "1", name: "Anna", color: "#FF6B6B" },
-  { id: "2", name: "Bartek", color: "#4ECDC4" },
-  { id: "3", name: "Ola", color: "#45B7D1" },
-  { id: "4", name: "Michał", color: "#FFA07A" },
+  { id: "1", name: "Monika", color: "#FF6B6B" },
+  { id: "2", name: "Jędrzej", color: "#4ECDC4" },
+  { id: "3", name: "Karolina", color: "#45B7D1" },
+  { id: "4", name: "Filip", color: "#FFA07A" },
 ];
 
 const Index = () => {
@@ -71,7 +71,7 @@ const Index = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Plane className="h-8 w-8 text-primary" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Rozliczenie Japonii 🇯🇵
+              Rozliczenie Japonii <span className="text-4xl">🇯🇵</span>
             </h1>
           </div>
           <p className="text-xl text-muted-foreground">

@@ -11,43 +11,54 @@ interface BalanceSheetProps {
 export function BalanceSheet({ expenses, people }: BalanceSheetProps) {
   const calculateBalances = (): Balance[] => {
     const balances: { [key: string]: number } = {};
+    const totalPaid: { [key: string]: number } = {};
+    const totalOwed: { [key: string]: number } = {};
     
     // Initialize balances
     people.forEach(person => {
       balances[person.id] = 0;
+      totalPaid[person.id] = 0;
+      totalOwed[person.id] = 0;
     });
 
     // Calculate what each person paid and owes
     expenses.forEach(expense => {
       const sharePerPerson = expense.amount / expense.splitBetween.length;
       
-      // Person who paid gets credit
-      balances[expense.paidBy] += expense.amount;
+      // Track total paid by each person
+      totalPaid[expense.paidBy] += expense.amount;
       
       // Each person in split owes their share
       expense.splitBetween.forEach(personId => {
-        balances[personId] -= sharePerPerson;
+        totalOwed[personId] += sharePerPerson;
       });
+    });
+
+    // Calculate final balances (what they paid minus what they owe)
+    people.forEach(person => {
+      balances[person.id] = totalPaid[person.id] - totalOwed[person.id];
     });
 
     return Object.entries(balances).map(([personId, balance]) => ({
       personId,
-      balance: Math.round(balance * 100) / 100
+      balance: Math.round(balance * 100) / 100,
+      totalPaid: Math.round(totalPaid[personId] * 100) / 100,
+      totalOwed: Math.round(totalOwed[personId] * 100) / 100
     }));
   };
 
   const calculateSettlements = (balances: Balance[]): Settlement[] => {
-    const debtors = balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance);
-    const creditors = balances.filter(b => b.balance < 0).sort((a, b) => a.balance - b.balance);
+    const creditors = balances.filter(b => b.balance > 0).sort((a, b) => b.balance - a.balance);
+    const debtors = balances.filter(b => b.balance < 0).sort((a, b) => a.balance - b.balance);
     
     const settlements: Settlement[] = [];
     
     let i = 0, j = 0;
-    while (i < debtors.length && j < creditors.length) {
-      const debtor = debtors[i];
-      const creditor = creditors[j];
+    while (i < creditors.length && j < debtors.length) {
+      const creditor = creditors[i];
+      const debtor = debtors[j];
       
-      const amount = Math.min(debtor.balance, Math.abs(creditor.balance));
+      const amount = Math.min(creditor.balance, Math.abs(debtor.balance));
       
       if (amount > 0.01) { // Ignore very small amounts
         settlements.push({
@@ -57,11 +68,11 @@ export function BalanceSheet({ expenses, people }: BalanceSheetProps) {
         });
       }
       
-      debtor.balance -= amount;
-      creditor.balance += amount;
+      creditor.balance -= amount;
+      debtor.balance += amount;
       
-      if (debtor.balance < 0.01) i++;
-      if (Math.abs(creditor.balance) < 0.01) j++;
+      if (creditor.balance < 0.01) i++;
+      if (Math.abs(debtor.balance) < 0.01) j++;
     }
     
     return settlements;
@@ -116,10 +127,10 @@ export function BalanceSheet({ expenses, people }: BalanceSheetProps) {
         </CardContent>
       </Card>
 
-      {/* Individual Balances */}
+      {/* Individual Expenses */}
       <Card>
         <CardHeader>
-          <CardTitle>Bilans indywidualny</CardTitle>
+          <CardTitle>Wydatki każdej osoby</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -127,7 +138,45 @@ export function BalanceSheet({ expenses, people }: BalanceSheetProps) {
               const person = people.find(p => p.id === balance.personId);
               if (!person) return null;
               
-              const isOwed = balance.balance < 0;
+              return (
+                <div
+                  key={balance.personId}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full" 
+                      style={{ backgroundColor: person.color }}
+                    />
+                    <span className="font-medium">{person.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-lg">
+                      Zapłacił: {formatCurrency(balance.totalPaid)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Powinien zapłacić: {formatCurrency(balance.totalOwed)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Final Balances */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bilans końcowy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {balances.map((balance) => {
+              const person = people.find(p => p.id === balance.personId);
+              if (!person) return null;
+              
+              const isOwed = balance.balance > 0;
               const amount = Math.abs(balance.balance);
               
               return (
