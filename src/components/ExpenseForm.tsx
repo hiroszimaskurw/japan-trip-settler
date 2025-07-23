@@ -51,8 +51,7 @@ export function ExpenseForm({ people, onAddExpense }: ExpenseFormProps) {
 
     setDescription("");
     setAmount("");
-    setPaidBy("");
-    setSplitBetween([]);
+    // Nie resetuj paidBy i splitBetween - użytkownik często dodaje kolejne wydatki dla tych samych osób
     setCategory("");
     setCurrency("JPY");
   };
