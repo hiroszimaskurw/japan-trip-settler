@@ -31,8 +31,8 @@ export function ExpenseForm({ people, onAddExpense }: ExpenseFormProps) {
   const [category, setCategory] = useState("");
   const [currency, setCurrency] = useState<"JPY" | "PLN">("JPY");
   
-  // Kurs wymiany PLN -> JPY (aktualizuj w razie potrzeby)
-  const exchangeRate = 37; // 1 PLN = ~37 JPY
+  // Kurs wymiany PLN -> JPY: 1000 JPY = 26 PLN
+  const exchangeRate = 38.46; // 1 PLN ≈ 38.46 JPY
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

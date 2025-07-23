@@ -42,7 +42,7 @@ const Index = () => {
     });
   };
 
-  const exportData = () => {
+  const exportToJSON = () => {
     const data = {
       people,
       expenses,
@@ -60,6 +60,33 @@ const Index = () => {
     toast({
       title: "Dane wyeksportowane!",
       description: "Plik JSON został pobrany na Twoje urządzenie",
+    });
+  };
+
+  const exportToCSV = () => {
+    const csvHeader = "Data,Opis,Kwota (JPY),Kto płacił,Uczestnicy,Kategoria\n";
+    const csvData = expenses.map(expense => {
+      const payer = people.find(p => p.id === expense.paidBy)?.name || '';
+      const participants = expense.splitBetween.map(id => 
+        people.find(p => p.id === id)?.name || ''
+      ).join('; ');
+      const date = new Date(expense.date).toLocaleDateString('pl-PL');
+      
+      return `"${date}","${expense.description}","${expense.amount}","${payer}","${participants}","${expense.category || ''}"`;
+    }).join('\n');
+    
+    const csvContent = csvHeader + csvData;
+    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(csvBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `wyjazd-japonia-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "CSV wyeksportowany!",
+      description: "Plik CSV został pobrany na Twoje urządzenie",
     });
   };
 
@@ -130,9 +157,14 @@ const Index = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Wszystkie wydatki</h2>
-                <Button onClick={exportData} variant="outline">
-                  Eksportuj dane
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={exportToCSV} variant="outline">
+                    Eksportuj CSV
+                  </Button>
+                  <Button onClick={exportToJSON} variant="outline">
+                    Eksportuj JSON
+                  </Button>
+                </div>
               </div>
               <ExpenseList 
                 expenses={expenses} 
