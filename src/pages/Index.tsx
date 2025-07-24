@@ -8,14 +8,14 @@ import { ExpenseList } from "@/components/ExpenseList";
 import { BalanceSheet } from "@/components/BalanceSheet";
 import { PasswordAuth } from "@/components/PasswordAuth";
 import { Person, Expense } from "@/types/expense";
-import { useSharedData } from "@/hooks/useSharedData";
+import { useJapanTripData } from "@/hooks/useJapanTripData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
-  const { people, expenses, loading, addExpense, deleteExpense } = useSharedData();
+  const { people, expenses, loading, addExpense, deleteExpense } = useJapanTripData();
 
   // Check authentication on mount
   useEffect(() => {
