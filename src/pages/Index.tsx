@@ -2,97 +2,44 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Users, Calculator, Settings, ArrowLeft } from "lucide-react";
+import { Plane, Users, Calculator, Settings } from "lucide-react";
 import { ExpenseForm } from "@/components/ExpenseForm";
 import { ExpenseList } from "@/components/ExpenseList";
 import { BalanceSheet } from "@/components/BalanceSheet";
-import { AuthWrapper } from "@/components/AuthWrapper";
-import { GroupSelector } from "@/components/GroupSelector";
-import { ShareGroup } from "@/components/ShareGroup";
-import { Person, Expense, convertDatabaseExpenseToExpense } from "@/types/expense";
-import { useExpenseGroup } from "@/hooks/useExpenseGroup";
+import { PasswordAuth } from "@/components/PasswordAuth";
+import { Person, Expense } from "@/types/expense";
+import { useSharedData } from "@/hooks/useSharedData";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
-  const { 
-    group, 
-    members, 
-    expenses: dbExpenses, 
-    loading, 
-    addExpense, 
-    deleteExpense 
-  } = useExpenseGroup(selectedGroupId || undefined);
+  const { people, expenses, loading, addExpense, deleteExpense } = useSharedData();
 
-  // Konwertuj członków grupy na format Person
-  const people: Person[] = members.map(member => ({
-    id: member.id,
-    name: member.name,
-    color: member.color,
-  }));
-
-  // Konwertuj wydatki z bazy na format Expense
-  const expenses: Expense[] = dbExpenses.map(convertDatabaseExpenseToExpense);
-
-  // Sprawdź URL pod kątem kodu dołączania do grupy
+  // Check authentication on mount
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const joinCode = urlParams.get('join');
-    if (joinCode) {
-      // Przekieruj do selektora grup z kodem
-      window.history.replaceState({}, '', window.location.pathname);
+    const authStatus = localStorage.getItem('japanTripAuth');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
     }
   }, []);
 
-  const handleAddExpense = async (expenseData: Omit<Expense, "id">) => {
-    try {
-      await addExpense(
-        expenseData.description,
-        expenseData.amount,
-        expenseData.paidBy,
-        expenseData.splitBetween,
-        expenseData.category,
-        expenseData.date
-      );
-      toast({
-        title: "Wydatek dodany!",
-        description: `${expenseData.description} - ${expenseData.amount.toLocaleString('pl-PL')} ¥`,
-      });
-    } catch (error) {
-      console.error('Błąd dodawania wydatku:', error);
-      toast({
-        title: "Błąd",
-        description: "Nie udało się dodać wydatku",
-        variant: "destructive",
-      });
-    }
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
   };
 
-  const handleDeleteExpense = async (id: string) => {
-    try {
-      await deleteExpense(id);
-      toast({
-        title: "Wydatek usunięty",
-        description: "Wydatek został pomyślnie usunięty",
-        variant: "destructive",
-      });
-    } catch (error) {
-      console.error('Błąd usuwania wydatku:', error);
-      toast({
-        title: "Błąd",
-        description: "Nie udało się usunąć wydatku",
-        variant: "destructive",
-      });
-    }
+  const handleAddExpense = (expenseData: Omit<Expense, "id">) => {
+    addExpense(expenseData);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    deleteExpense(id);
   };
 
   const exportToJSON = () => {
-    if (!group) return;
-    
     const data = {
-      group: group.name,
+      group: "Rozliczenia Japońskie",
       people,
       expenses,
       exportDate: new Date().toISOString(),
@@ -102,7 +49,7 @@ const Index = () => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${group.name.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `rozliczenia-japonskie-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
     
@@ -113,8 +60,6 @@ const Index = () => {
   };
 
   const exportToCSV = () => {
-    if (!group) return;
-    
     const csvHeader = "Data,Opis,Kwota (JPY),Kto płacił,Uczestnicy,Kategoria\n";
     const csvData = expenses.map(expense => {
       const payer = people.find(p => p.id === expense.paidBy)?.name || '';
@@ -131,7 +76,7 @@ const Index = () => {
     const url = URL.createObjectURL(csvBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${group?.name.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `rozliczenia-japonskie-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     
@@ -141,29 +86,24 @@ const Index = () => {
     });
   };
 
+  if (!isAuthenticated) {
+    return <PasswordAuth onAuthenticated={handleAuthenticated} />;
+  }
+
   return (
-    <AuthWrapper>
-      {!selectedGroupId ? (
-        <GroupSelector onGroupSelected={setSelectedGroupId} />
-      ) : (
-        <MainApp 
-          group={group}
-          people={people}
-          expenses={expenses}
-          loading={loading}
-          onAddExpense={handleAddExpense}
-          onDeleteExpense={handleDeleteExpense}
-          onExportJSON={exportToJSON}
-          onExportCSV={exportToCSV}
-          onBackToGroups={() => setSelectedGroupId(null)}
-        />
-      )}
-    </AuthWrapper>
+    <MainApp 
+      people={people}
+      expenses={expenses}
+      loading={loading}
+      onAddExpense={handleAddExpense}
+      onDeleteExpense={handleDeleteExpense}
+      onExportJSON={exportToJSON}
+      onExportCSV={exportToCSV}
+    />
   );
 };
 
 interface MainAppProps {
-  group: any;
   people: Person[];
   expenses: Expense[];
   loading: boolean;
@@ -171,40 +111,23 @@ interface MainAppProps {
   onDeleteExpense: (id: string) => void;
   onExportJSON: () => void;
   onExportCSV: () => void;
-  onBackToGroups: () => void;
 }
 
 function MainApp({ 
-  group, 
   people, 
   expenses, 
   loading, 
   onAddExpense, 
   onDeleteExpense, 
   onExportJSON, 
-  onExportCSV,
-  onBackToGroups 
+  onExportCSV
 }: MainAppProps) {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <div className="flex items-center gap-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Ładowanie grupy...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!group) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Grupa nie została znaleziona</h2>
-          <Button onClick={onBackToGroups}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Powrót do wyboru grup
-          </Button>
+          <span>Ładowanie danych...</span>
         </div>
       </div>
     );
@@ -214,27 +137,15 @@ function MainApp({
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-8 relative">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onBackToGroups}
-            className="absolute left-0 top-0"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zmień grupę
-          </Button>
+        <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Plane className="h-8 w-8 text-primary" />
+            <span className="text-4xl">🇯🇵</span>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              {group.name}
+              Rozliczenia Japońskie
             </h1>
-            {group.share_code && (
-              <ShareGroup shareCode={group.share_code} groupName={group.name} />
-            )}
           </div>
           <p className="text-xl text-muted-foreground">
-            {group.description || 'Inteligentny kalkulator wydatków dla Twojej grupy'}
+            Inteligentny kalkulator wydatków dla wyjazdu do Japonii
           </p>
         </div>
 
